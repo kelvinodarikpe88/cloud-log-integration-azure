@@ -1,0 +1,10 @@
+// METADATA-START
+// id: SOC-DET-030 | mitre: T1110, T1021.001 | nist: DE.CM-7 | iso27001: A.8.16
+// soc2: CC7.2 | severity: medium | data_source: NSG Flow Logs
+// METADATA-END
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1d)
+| where AllowedOut_F == true and DestinationPort_F in (22, 3389, 5985)
+| summarize Attempts = count(), DistinctSrcIPs = dcount(SrcIP_s)
+    by DestinationIP_s, DestinationPort_F, bin(TimeGenerated, 15m)
+| where Attempts > 50 or DistinctSrcIPs > 10
