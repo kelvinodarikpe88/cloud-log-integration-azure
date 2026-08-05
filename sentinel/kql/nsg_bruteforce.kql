@@ -2,9 +2,18 @@
 // id: SOC-DET-030 | mitre: T1110, T1021.001 | nist: DE.CM-7 | iso27001: A.8.16
 // soc2: CC7.2 | severity: medium | data_source: NSG Flow Logs
 // METADATA-END
+
+// Azure NSG brute-force detection
+// Identify repeated denied network connections from the same source.
+
 AzureNetworkAnalytics_CL
-| where TimeGenerated > ago(1d)
-| where AllowedOut_F == true and DestinationPort_F in (22, 3389, 5985)
-| summarize Attempts = count(), DistinctSrcIPs = dcount(SrcIP_s)
-    by DestinationIP_s, DestinationPort_F, bin(TimeGenerated, 15m)
-| where Attempts > 50 or DistinctSrcIPs > 10
+| where TimeGenerated >= ago(1h)
+| where FlowStatus_s =~ "D"
+| summarize
+    AttemptCount = count(),
+    FirstSeen = min(TimeGenerated),
+    LastSeen = max(TimeGenerated),
+    DestinationPorts = make_set(DestPort_d, 20)
+    by SrcIp_s, DstIp_s
+| where AttemptCount >= 50
+| order by AttemptCount desc
